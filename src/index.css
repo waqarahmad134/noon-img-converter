@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+*,
+::before,
+::after {
+  border-width: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.bg-primary {
+  --tw-bg-opacity: 1;
+  background-color: rgb(11 44 61/var(--tw-bg-opacity));
+}
+
+textarea {
+  width: 100%; /* Adjust to the container */
+  height: auto;
+  resize: none; /* Prevent resizing */
+  font-family: Arial, sans-serif; /* Match your existing design */
+  line-height: 1.5; /* Improve readability */
+}
