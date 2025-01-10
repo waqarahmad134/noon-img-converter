@@ -1,106 +1,172 @@
-import React, { useState, useRef } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Header from "../components/Header";
+import React, { useState, useRef } from "react"
+import Header from "../components/Header"
+import { ToastContainer, toast } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 
 export default function Home() {
-  const [inputValue, setInputValue] = useState("");
-  const [outputValue, setOutputValue] = useState("");
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: 660, height: 900 });
-  const canvasRef = useRef(null);
+  const [inputValue, setInputValue] = useState("")
+  const [outputValue, setOutputValue] = useState("")
+  const [count, setCount] = useState(0)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [addLogo, setAddLogo] = useState(false)
+  const [logo, setLogo] = useState(null)
+  const [dimensions, setDimensions] = useState("660 X 900")
+  const [logoPosition, setLogoPosition] = useState("bottom-right")
+  const canvasRef = useRef(null)
 
   const handleConvert = async () => {
-    setLoading(true); // Start loading spinner
-    const lines = inputValue.split("\n");
+    setIsProcessing(true)
+    toast.info("Processing started...")
+    const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
+    const lines = inputValue.split("\n")
 
     const modifiedLines = lines
       .map((line) => {
-        const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/);
+        const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
         if (match) {
-          return `${match[1]}US_${match[2]}`;
+          return `${match[1]}US_${match[2]}`
         }
-        return null;
+        return null
       })
-      .filter(Boolean);
+      .filter(Boolean)
 
-    const newUrls = [];
+    const newUrls = []
 
     for (const url of modifiedLines) {
-      const processedUrl = await processImage(url);
+      const processedUrl = await processImage(url, canvasWidth, canvasHeight)
       if (processedUrl) {
-        newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`);
+        newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
       }
     }
 
-    setOutputValue(newUrls.join("\n"));
-    setCount(newUrls.length);
-    setLoading(false); // Stop loading spinner
-    toast.success("Conversion completed successfully!"); // Show success toaster
-  };
+    setOutputValue(newUrls.join("\n"))
+    setCount(newUrls.length)
+    setIsProcessing(false)
+    toast.success("Processing completed!")
+  }
 
   const handleCopy = () => {
     navigator.clipboard
       .writeText(outputValue)
-      .then(() => toast.info("Copied to clipboard!"))
-      .catch((err) => console.error("Failed to copy:", err));
-  };
+      .then(() => toast.success("Copied to clipboard!"))
+      .catch((err) => toast.error("Failed to copy"))
+  }
 
-  const handleDimensionChange = (event) => {
-    const [width, height] = event.target.value.split(" X ").map(Number);
-    setCanvasDimensions({ width, height });
-  };
-
-  const processImage = async (imageUrl) => {
+  const processImage = async (imageUrl, canvasWidth, canvasHeight) => {
     return new Promise((resolve) => {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      const img = new Image();
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext("2d")
+      const img = new Image()
 
-      img.crossOrigin = "anonymous";
+      img.crossOrigin = "anonymous"
       img.onload = async () => {
-        canvas.width = canvasDimensions.width;
-        canvas.height = canvasDimensions.height;
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = "white"
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        const newWidth = img.width * scale;
-        const newHeight = img.height * scale;
-        const x = (canvas.width - newWidth) / 2;
-        const y = (canvas.height - newHeight) / 2;
+        const scale = Math.min(
+          canvas.width / img.width,
+          canvas.height / img.height
+        )
+        const newWidth = img.width * scale
+        const newHeight = img.height * scale
+        const x = (canvas.width - newWidth) / 2
+        const y = (canvas.height - newHeight) / 2
+        ctx.drawImage(img, x, y, newWidth, newHeight)
 
-        ctx.drawImage(img, x, y, newWidth, newHeight);
+        if (addLogo && logo) {
+          const logoImg = new Image()
+          logoImg.src = URL.createObjectURL(logo)
+          logoImg.onload = () => {
+            const logoSize = 100
+            let logoX = 0
+            let logoY = 0
 
-        canvas.toBlob(async (blob) => {
-          const formData = new FormData();
-          formData.append("image", blob, "processed-image.png");
-
-          try {
-            const response = await fetch("https://noon.bolly4u.cn/upload.php", {
-              method: "POST",
-              body: formData,
-            });
-            const result = await response.json();
-            if (result.success) {
-              resolve(result.url);
-            } else {
-              console.error("Image upload failed:", result.error);
-              resolve(null);
+            // Determine logo position
+            switch (logoPosition) {
+              case "top-left":
+                logoX = 10
+                logoY = 10
+                break
+              case "top-right":
+                logoX = canvas.width - logoSize - 10
+                logoY = 10
+                break
+              case "bottom-left":
+                logoX = 10
+                logoY = canvas.height - logoSize - 10
+                break
+              case "bottom-right":
+                logoX = canvas.width - logoSize - 10
+                logoY = canvas.height - logoSize - 10
+                break
+              case "center":
+                logoX = (canvas.width - logoSize) / 2
+                logoY = (canvas.height - logoSize) / 2
+                break
+              default:
+                break
             }
-          } catch (error) {
-            console.error("Error uploading image:", error);
-            resolve(null);
-          }
-        }, "image/png");
-      };
 
-      img.src = imageUrl;
-    });
-  };
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
+
+            canvas.toBlob(async (blob) => {
+              const formData = new FormData()
+              formData.append("image", blob, "processed-image.png")
+              try {
+                const response = await fetch(
+                  "https://noon.bolly4u.cn/upload.php",
+                  {
+                    method: "POST",
+                    body: formData,
+                  }
+                )
+                const result = await response.json()
+                if (result.success) {
+                  resolve(result.url)
+                } else {
+                  toast.error("Image upload failed")
+                  resolve(null)
+                }
+              } catch (error) {
+                toast.error("Error uploading image")
+                resolve(null)
+              }
+            }, "image/png")
+          }
+        } else {
+          canvas.toBlob(async (blob) => {
+            const formData = new FormData()
+            formData.append("image", blob, "processed-image.png")
+            try {
+              const response = await fetch(
+                "https://noon.bolly4u.cn/upload.php",
+                {
+                  method: "POST",
+                  body: formData,
+                }
+              )
+              const result = await response.json()
+              if (result.success) {
+                resolve(result.url)
+              } else {
+                toast.error("Image upload failed")
+                resolve(null)
+              }
+            } catch (error) {
+              toast.error("Error uploading image")
+              resolve(null)
+            }
+          }, "image/png")
+        }
+      }
+
+      img.src = imageUrl
+    })
+  }
 
   return (
     <>
@@ -114,15 +180,42 @@ export default function Home() {
               <div className="flex justify-between items-center mb-3">
                 <label className="text-[24px]">ADD LIST</label>
                 <form className="max-w-sm flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-900">Dimensions</label>
+                  <label className="text-sm font-medium">
+                    Dimensions
+                  </label>
                   <select
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                    onChange={handleDimensionChange}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
+                    value={dimensions}
+                    onChange={(e) => setDimensions(e.target.value)}
                   >
                     <option value="660 X 900">660 X 900</option>
                     <option value="800 X 1200">800 X 1200</option>
                   </select>
                 </form>
+              </div>
+              <div className="flex items-center gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  checked={addLogo}
+                  onChange={(e) => setAddLogo(e.target.checked)}
+                />
+                <label>Add Logo</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setLogo(e.target.files[0])}
+                />
+                <select
+                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
+                  value={logoPosition}
+                  onChange={(e) => setLogoPosition(e.target.value)}
+                >
+                  <option value="top-left">Top Left</option>
+                  <option value="top-right">Top Right</option>
+                  <option value="bottom-left">Bottom Left</option>
+                  <option value="bottom-right">Bottom Right</option>
+                  <option value="center">Center</option>
+                </select>
               </div>
               <textarea
                 id="message"
@@ -135,15 +228,13 @@ export default function Home() {
               <div className="mt-3 text-end">
                 <button
                   type="button"
-                  className={`text-white font-medium rounded-lg text-sm px-5 py-2.5 ${
-                    loading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-700 hover:bg-blue-800"
-                  }`}
+                  disabled={isProcessing}
+                  className={`${
+                    isProcessing ? "bg-gray-500" : "bg-blue-700"
+                  } text-white hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2.5`}
                   onClick={handleConvert}
-                  disabled={loading}
                 >
-                  {loading ? (
+                  {isProcessing ? (
                     <span className="flex items-center justify-center">
                       <svg
                         className="animate-spin h-5 w-5 mr-2 text-white"
@@ -204,5 +295,5 @@ export default function Home() {
       </div>
       <ToastContainer />
     </>
-  );
+  )
 }
