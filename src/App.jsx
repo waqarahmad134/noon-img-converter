@@ -5,6 +5,7 @@ import ErrorPage from "./errors/error-page"
 import { ToastContainer } from "react-toastify"
 import { ChakraProvider } from "@chakra-ui/react"
 import { HelmetProvider } from "react-helmet-async"
+import Other from "./pages/Other"
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/other" element={<Other />} />
               <Route path="*" element={<ErrorPage />} />
             </Routes>
           </BrowserRouter>
