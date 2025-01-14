@@ -19,9 +19,13 @@ export default function Home() {
     toast.info("Processing started...")
     const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
     const lines = inputValue.split("\n")
+    console.log("🚀 ~ handleConvert ~ lines:", lines)
 
     const modifiedLines = lines
       .map((line) => {
+        if (line.includes("ikea.com")) {
+          return line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1")
+        }
         const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
         if (match) {
           return `${match[1]}US_${match[2]}`
@@ -30,10 +34,13 @@ export default function Home() {
       })
       .filter(Boolean)
 
+    console.log("🚀 ~ handleConvert ~ modifiedLines:", modifiedLines)
+
     const newUrls = []
 
     for (const url of modifiedLines) {
       const processedUrl = await processImage(url, canvasWidth, canvasHeight)
+      console.log("🚀 ~ handleConvert ~ processedUrl:", processedUrl)
       if (processedUrl) {
         newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
       }
@@ -180,9 +187,7 @@ export default function Home() {
               <div className="flex justify-between items-center mb-3">
                 <label className="text-[24px]">ADD LIST</label>
                 <form className="max-w-sm flex items-center gap-3">
-                  <label className="text-sm font-medium">
-                    Dimensions
-                  </label>
+                  <label className="text-sm font-medium">Dimensions</label>
                   <select
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5"
                     value={dimensions}
