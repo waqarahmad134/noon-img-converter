@@ -14,33 +14,82 @@ export default function Home() {
   const [logoPosition, setLogoPosition] = useState("bottom-right")
   const canvasRef = useRef(null)
 
+  // const handleConvert = async () => {
+  //   setIsProcessing(true)
+  //   toast.info("Processing started...")
+  //   const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
+  //   const lines = inputValue.split("\n")
+  //   console.log("🚀 ~ handleConvert ~ lines:", lines)
+
+  //   const modifiedLines = lines
+  //     .map((line) => {
+  //       if (line.includes("ikea.com")) {
+  //         return line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1")
+  //       }
+  //       const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
+  //       if (match) {
+  //         return `${match[1]}US_${match[2]}`
+  //       }
+  //       return null
+  //     })
+  //     .filter(Boolean)
+  //   const newUrls = []
+  //   for (const url of modifiedLines) {
+  //     const processedUrl = await processImage(url, canvasWidth, canvasHeight)
+  //     if (processedUrl) {
+  //       newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
+  //     }
+  //   }
+
+  //   setOutputValue(newUrls.join("\n"))
+  //   setCount(newUrls.length)
+  //   setIsProcessing(false)
+  //   toast.success("Processing completed!")
+  // }
+
   const handleConvert = async () => {
     setIsProcessing(true)
     toast.info("Processing started...")
+
     const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
     const lines = inputValue.split("\n")
-    console.log("🚀 ~ handleConvert ~ lines:", lines)
-
-    const modifiedLines = lines
-      .map((line) => {
-        if (line.includes("ikea.com")) {
-          return line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1")
+    const urlPromises = lines.map(async (line) => {
+      if (line.includes("ikea.com")) {
+        try {
+          const response = await fetch("https://noon.bolly4u.cn/upload.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ url: line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1") }),
+          })
+          const result = await response.json()
+          console.log("🚀 ~ urlPromises ~ result.url:", result.url)
+          if (result.success) {
+            return  `https://noon.bolly4u.cn/${result.url}`  
+          } else {
+            toast.error("Failed to process IKEA image.")
+            return null
+          }
+        } catch (error) {
+          toast.error("Error processing IKEA image.")
+          return null
         }
-        const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
-        if (match) {
-          return `${match[1]}US_${match[2]}`
-        }
-        return null
-      })
-      .filter(Boolean)
+      }
 
+      const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
+      if (match) {
+        return `${match[1]}US_${match[2]}` // Modify AC-specific URLs
+      }
+
+      return null // Skip invalid lines
+    })
+
+    const modifiedLines = (await Promise.all(urlPromises)).filter(Boolean)
     console.log("🚀 ~ handleConvert ~ modifiedLines:", modifiedLines)
 
     const newUrls = []
-
+    console.log("🚀 ~ handleConvert ~ newUrls:", newUrls)
     for (const url of modifiedLines) {
       const processedUrl = await processImage(url, canvasWidth, canvasHeight)
-      console.log("🚀 ~ handleConvert ~ processedUrl:", processedUrl)
       if (processedUrl) {
         newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
       }
