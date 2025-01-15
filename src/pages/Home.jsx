@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react"
 import Header from "../components/Header"
 import { ToastContainer, toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
+import { use } from "react"
 
 export default function Home() {
   const [inputValue, setInputValue] = useState("")
@@ -17,27 +18,51 @@ export default function Home() {
   // const handleConvert = async () => {
   //   setIsProcessing(true)
   //   toast.info("Processing started...")
+
   //   const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
   //   const lines = inputValue.split("\n")
-  //   console.log("🚀 ~ handleConvert ~ lines:", lines)
+  //   const urlPromises = lines.map(async (line) => {
+  //     if (line.includes("ikea.com")) {
+  //       try {
+  //         const response = await fetch(
+  //           "https://noon.bolly4u.cn/api/upload-from-url",
+  //           {
+  //             method: "POST",
+  //             body: JSON.stringify({
+  //               url: line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1"),
+  //             }),
+  //             headers: { "Content-Type": "application/json" },
+  //           }
+  //         )
+  //         const result = await response.json()
+  //         console.log("🚀 ~ urlPromises ~ result:", result)
+  //         if (result.success) {
+  //           return result.url
+  //         } else {
+  //           toast.error("Failed to process IKEA image.")
+  //           return null
+  //         }
+  //       } catch (error) {
+  //         toast.error("Error processing IKEA image.")
+  //         return null
+  //       }
+  //     }
 
-  //   const modifiedLines = lines
-  //     .map((line) => {
-  //       if (line.includes("ikea.com")) {
-  //         return line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1")
-  //       }
-  //       const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
-  //       if (match) {
-  //         return `${match[1]}US_${match[2]}`
-  //       }
-  //       return null
-  //     })
-  //     .filter(Boolean)
+  //     const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
+  //     if (match) {
+  //       return `${match[1]}US_${match[2]}` // Modify AC-specific URLs
+  //     }
+
+  //     return null // Skip invalid lines
+  //   })
+
+  //   const modifiedLines = (await Promise.all(urlPromises)).filter(Boolean)
+
   //   const newUrls = []
   //   for (const url of modifiedLines) {
   //     const processedUrl = await processImage(url, canvasWidth, canvasHeight)
   //     if (processedUrl) {
-  //       newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
+  //       newUrls.push(`https://noon.bolly4u.cn/api/${processedUrl}`)
   //     }
   //   }
 
@@ -53,18 +78,33 @@ export default function Home() {
 
     const [canvasWidth, canvasHeight] = dimensions.split(" X ").map(Number)
     const lines = inputValue.split("\n")
+    let isIkea
+    console.log("🚀 ~ handleConvert ~ lines:", lines)
+    if (lines?.[0].includes("ikea.com")) {
+      isIkea = true
+    }
     const urlPromises = lines.map(async (line) => {
       if (line.includes("ikea.com")) {
         try {
-          const response = await fetch("https://noon.bolly4u.cn/upload.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ url: line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1") }),
-          })
+          const formData = new FormData()
+          formData.append(
+            "url",
+            line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1")
+          )
+          if (addLogo && logo) {
+            formData.append("logo", logo)
+          }
+
+          const response = await fetch(
+            "https://noon.bolly4u.cn/api/upload-from-url",
+            {
+              method: "POST",
+              body: formData,
+            }
+          )
           const result = await response.json()
-          console.log("🚀 ~ urlPromises ~ result.url:", result.url)
           if (result.success) {
-            return  `https://noon.bolly4u.cn/${result.url}`  
+            return result.url
           } else {
             toast.error("Failed to process IKEA image.")
             return null
@@ -73,30 +113,31 @@ export default function Home() {
           toast.error("Error processing IKEA image.")
           return null
         }
+      } else {
+        const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
+        if (match) {
+          return `${match[1]}US_${match[2]}` // Modify AC-specific URLs
+        }
       }
-
-      const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/)
-      if (match) {
-        return `${match[1]}US_${match[2]}` // Modify AC-specific URLs
-      }
-
-      return null // Skip invalid lines
+      return null
     })
 
     const modifiedLines = (await Promise.all(urlPromises)).filter(Boolean)
     console.log("🚀 ~ handleConvert ~ modifiedLines:", modifiedLines)
 
-    const newUrls = []
-    console.log("🚀 ~ handleConvert ~ newUrls:", newUrls)
-    for (const url of modifiedLines) {
-      const processedUrl = await processImage(url, canvasWidth, canvasHeight)
-      if (processedUrl) {
-        newUrls.push(`https://noon.bolly4u.cn/${processedUrl}`)
+    if (isIkea) {
+      setOutputValue(modifiedLines.join("\n"))
+    } else {
+      const newUrls = []
+      for (const url of modifiedLines) {
+        const processedUrl = await processImage(url, canvasWidth, canvasHeight)
+        if (processedUrl) {
+          newUrls.push(`${processedUrl}`)
+        }
       }
+      setOutputValue(newUrls.join("\n"))
     }
-
-    setOutputValue(newUrls.join("\n"))
-    setCount(newUrls.length)
+    setCount(modifiedLines.length)
     setIsProcessing(false)
     toast.success("Processing completed!")
   }
@@ -109,16 +150,14 @@ export default function Home() {
   }
 
   const processImage = async (imageUrl, canvasWidth, canvasHeight) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const canvas = canvasRef.current
       const ctx = canvas.getContext("2d")
       const img = new Image()
-
       img.crossOrigin = "anonymous"
       img.onload = async () => {
         canvas.width = canvasWidth
         canvas.height = canvasHeight
-
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         ctx.fillStyle = "white"
         ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -127,6 +166,7 @@ export default function Home() {
           canvas.width / img.width,
           canvas.height / img.height
         )
+
         const newWidth = img.width * scale
         const newHeight = img.height * scale
         const x = (canvas.width - newWidth) / 2
@@ -141,7 +181,6 @@ export default function Home() {
             let logoX = 0
             let logoY = 0
 
-            // Determine logo position
             switch (logoPosition) {
               case "top-left":
                 logoX = 10
@@ -174,7 +213,7 @@ export default function Home() {
               formData.append("image", blob, "processed-image.png")
               try {
                 const response = await fetch(
-                  "https://noon.bolly4u.cn/upload.php",
+                  "https://noon.bolly4u.cn/api/upload-file",
                   {
                     method: "POST",
                     body: formData,
@@ -199,13 +238,14 @@ export default function Home() {
             formData.append("image", blob, "processed-image.png")
             try {
               const response = await fetch(
-                "https://noon.bolly4u.cn/upload.php",
+                "https://noon.bolly4u.cn/api/upload-file",
                 {
                   method: "POST",
                   body: formData,
                 }
               )
               const result = await response.json()
+              console.log("Server response:", result) // Debugging line
               if (result.success) {
                 resolve(result.url)
               } else {
@@ -218,6 +258,12 @@ export default function Home() {
             }
           }, "image/png")
         }
+      }
+
+      // Handle image loading error
+      img.onerror = () => {
+        toast.error("Failed to load image due to CORS issue or network error.")
+        reject("Image loading failed")
       }
 
       img.src = imageUrl
