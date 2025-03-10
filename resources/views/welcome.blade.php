@@ -4,11 +4,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>AM Green Image Converter</title>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,600&display=swap" rel="stylesheet" />
+
     <script src="https://cdn.tailwindcss.com"></script>
+
 </head>
 
 <body class="antialiased">
@@ -31,6 +35,7 @@
                                 id="dimensions">
                                 <option value="660 X 900">660 X 900</option>
                                 <option value="800 X 1200">800 X 1200</option>
+                                <option value="1500 X 1500">1500 X 1500</option>
                             </select>
                         </form>
                     </div>
@@ -69,6 +74,7 @@
                     </div>
                 </div>
             </div>
+
             <div>
                 <label class="text-[24px] mb-3">
                     YOUR LIST (<span id="count">0</span>) | Converted (<span id="convertedCount">0</span>)
@@ -88,6 +94,7 @@
     <div class="hidden">
         <canvas id="canvas"></canvas>
     </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -164,7 +171,9 @@
                 });
             };
 
+
             convertButton.addEventListener('click', async function() {
+                // Disable button and show loading state
                 convertButton.disabled = true;
                 document.getElementById('loadingSpinner').classList.remove('hidden');
                 document.getElementById('convertText').textContent = 'Converting...';
@@ -187,8 +196,10 @@
                         outputLines.push(''); // Maintain empty line
                         continue;
                     }
+
                     try {
                         let processedUrl = null;
+
                         if (line.includes('ikea.com') || line.includes("myipadbox") || line.includes("nooncdn.com")) {
                             const formData = new FormData();
                             formData.append('url', line.replace(/(\.[a-zA-Z]{3,4})(\?.*)?$/, "$1"));
@@ -207,7 +218,6 @@
                             }
                         } else {
                             const match = line.match(/^(.*?_AC_).*?(\.[a-zA-Z]{3,4})$/);
-                            console.log("🚀 ~ convertButton.addEventListener ~ match:", match)
                             if (match) {
                                 const modifiedUrl = `${match[1]}US_${match[2]}`;
                                 try {
@@ -246,9 +256,17 @@
                             outputLines.push('');
                         }
 
-                        outputValue.value = outputLines.join('\n');
+                        outputValue.value = outputLines.join('\n'); 
                         count.textContent = outputLines.length;
                         document.getElementById('convertedCount').textContent = convertedCount;
+
+                        // if (processedUrl) {
+                        //     outputLines.push(processedUrl);
+                        //     convertedCount++; // Increment converted count
+                        //     outputValue.value += processedUrl + '\n'; // Show data side by side
+                        //     count.textContent = outputLines.length;
+                        //     document.getElementById('convertedCount').textContent = convertedCount; // Update converted count
+                        // }
 
                     } catch (error) {
                         console.log(error);
@@ -260,8 +278,6 @@
                 document.getElementById('loadingSpinner').classList.add('hidden');
                 document.getElementById('convertText').textContent = 'Convert';
             });
-
-
 
 
             copyButton.addEventListener('click', function() {
